@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getInterview, getMemoryStore, saveInterview, uid } from "@/lib/store";
 import { openingLine, streamInterviewReply } from "@/lib/interview";
 import { InterviewSession } from "@/lib/types";
+import { getCookieMaxAge, getCookieName, llmGuard } from "@/lib/quota";
 
 export const runtime = "nodejs";
 
@@ -16,6 +17,10 @@ export async function GET(req: NextRequest) {
 
 /** POST /api/interview — 发送一条消息，流式返回采访者回复 */
 export async function POST(req: NextRequest) {
+  // LLM 配额守卫（mock 免费；真实调用每日限次）
+  const guard = llmGuard(req);
+  if (guard.response) return guard.response;
+
   const body = await req.json().catch(() => ({}));
   const { id, subjectName, period, message } = body;
 
@@ -70,11 +75,15 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  return new Response(stream, {
-    headers: {
-      "Content-Type": "text/plain; charset=utf-8",
-      "Cache-Control": "no-cache, no-transform",
-      "X-Session-Id": session.id,
-    },
-  });
+  const headers: Record<string, string> = {
+    "Content-Type": "text/plain; charset=utf-8",
+    "Cache-Control": "no-cache, no-transform",
+    "X-Session-Id": session.id,
+  };
+  // 关键：写回与本次 consume 相同的 uid
+  if (guard.uid && !guard.fromCookie) {
+    headers["Set-Cookie"] = `${getCookieName()}=${guard.uid}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${getCookieMaxAge()}`;
+  }
+
+  return new Response(stream, { headers });
 }
