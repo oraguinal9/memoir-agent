@@ -1,0 +1,17 @@
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+
+# 运行时数据（记忆库、访谈记录、书稿）
+data/
+
+# 环境变量
+.env
+.env.local
+.env*.local
+
+# 系统文件
+.DS_Store
+Thumbs.db

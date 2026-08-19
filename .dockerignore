@@ -1,0 +1,9 @@
+node_modules
+.next
+data
+test/screenshots
+.workbuddy
+.git
+.env
+.env.local
+*.md
